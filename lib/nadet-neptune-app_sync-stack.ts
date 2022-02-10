@@ -18,7 +18,18 @@ export class NadetNeptuneAppSyncStack extends Stack {
     // Create VPC to have a connection between Neptune and lambda
     const vpc = new Vpc(this, 'NeptuneAppSyncVPC');
 
+    // Create Neptune Cluster
+    const cluster = new DatabaseCluster(this, 'NeptuneDBCluster', {
+      instanceType: InstanceType.R5_LARGE,
+      vpc
+    });
 
+    // allow anyone in "vpc" to access
+    cluster.connections.allowDefaultPortFromAnyIpv4('Open to everyone');
+
+    // get references to establish a websocket connection with lambda
+    const writeAddress = cluster.clusterEndpoint.socketAddress;
+    const readAddress = cluster.clusterReadEndpoint.socketAddress;
 
 
     // Create GraphQL Api, appsync datastore, resolvers etc...
