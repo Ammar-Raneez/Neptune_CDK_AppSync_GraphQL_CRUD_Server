@@ -3,6 +3,7 @@ import deletePost from './deletePost';
 import getPost from './getPost';
 import listPosts from './listPosts';
 import { Post } from './Post';
+import updatePost from './updatePost';
 
 type AppSyncEvent = {
   info: {
@@ -24,6 +25,8 @@ exports.handler = async (event: AppSyncEvent) => {
       return await getPost(event.arguments.postId);
     case 'deletePost':
       return await deletePost(event.arguments.postId);
+    case 'updatePost':
+      return await updatePost(event.arguments.postId, event.arguments.post);
     default:
       return null;
   }

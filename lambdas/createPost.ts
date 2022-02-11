@@ -13,15 +13,20 @@ async function createPost(post: Post) {
   const graph = new Graph();
   const g = graph.traversal().withRemote(driverConnector);
 
-  // Add a vertex called "Posts", that has title and content, to the graph
-  const data = await g.addV('Posts')
-    .property('title', post.title)
-    .property('content', post.content)
-    .next();
-
-  post.id = data.value.id;
-  driverConnector.close();
-  return post;
+  try {
+    // Add a vertex called "Posts", that has title and content, to the graph
+    const data = await g.addV('Posts')
+      .property('title', post.title)
+      .property('content', post.content)
+      .next();
+  
+    post.id = data.value.id;
+    driverConnector.close();
+    return post;
+  } catch (err) {
+    console.log('ERROR', err);
+    return null;
+  }
 }
 
 export default createPost;

@@ -9,6 +9,11 @@ input PostInput {
   content: String!
 }
 
+input UpdatePostInput {
+  title: String
+  content: String
+}
+
 type Query {
   listPosts: [Post]
   getPost(postId: ID!): Post
@@ -16,6 +21,7 @@ type Query {
 
 type Mutation {
   createPost(post: PostInput!): Post
+  updatePost(postId: ID!, post: UpdatePostInput!): Post
   deletePost(postId: ID!): ID
 }
 

@@ -15,7 +15,6 @@ const listPosts = async () => {
 
     for (const vertex of data) {
       const properties = await g.V(vertex).properties().toList();
-      console.log(properties)
       const post = properties.reduce((acc: any, next: any) => {
         acc[next.label] = next.value;
         return acc;
