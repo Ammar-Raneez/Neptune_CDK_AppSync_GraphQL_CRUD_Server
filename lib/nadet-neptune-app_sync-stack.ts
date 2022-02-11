@@ -88,6 +88,10 @@ export class NadetNeptuneAppSyncStack extends Stack {
       typeName: 'Query',
       fieldName: 'getPost',
     });
+    dataSource.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'deletePost',
+    });
 
 
     new CfnOutput(this, 'NeptuneGraphQLAPIKeyOutput', {

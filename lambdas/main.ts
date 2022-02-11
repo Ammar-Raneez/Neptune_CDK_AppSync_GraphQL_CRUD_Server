@@ -1,4 +1,5 @@
 import createPost from './createPost';
+import deletePost from './deletePost';
 import getPost from './getPost';
 import listPosts from './listPosts';
 import { Post } from './Post';
@@ -21,6 +22,8 @@ exports.handler = async (event: AppSyncEvent) => {
       return await listPosts();
     case 'getPost':
       return await getPost(event.arguments.postId);
+    case 'deletePost':
+      return await deletePost(event.arguments.postId);
     default:
       return null;
   }

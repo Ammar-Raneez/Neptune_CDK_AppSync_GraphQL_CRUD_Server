@@ -16,6 +16,7 @@ type Query {
 
 type Mutation {
   createPost(post: PostInput!): Post
+  deletePost(postId: ID!): ID
 }
 
 type Subscription {
