@@ -11,6 +11,7 @@ input PostInput {
 
 type Query {
   listPosts: [Post]
+  getPost(postId: ID!): Post
 }
 
 type Mutation {
