@@ -1,15 +1,11 @@
 import { CfnOutput, Stack, StackProps } from 'aws-cdk-lib';
-import {
-  CfnApiKey,
-  CfnDataSource,
-  CfnGraphQLApi,
-  CfnGraphQLSchema,
-  CfnResolver
-} from 'aws-cdk-lib/aws-appsync';
 import { Vpc } from 'aws-cdk-lib/aws-ec2';
-import { Code, Function as Lambda, Runtime } from 'aws-cdk-lib/aws-lambda';
+import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 import { DatabaseCluster, InstanceType } from '@aws-cdk/aws-neptune-alpha';
+import { AuthorizationType, GraphqlApi, Schema } from '@aws-cdk/aws-appsync-alpha';
+import { join } from 'path';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 
 export class NadetNeptuneAppSyncStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -21,11 +17,31 @@ export class NadetNeptuneAppSyncStack extends Stack {
     // Create Neptune Cluster
     const cluster = new DatabaseCluster(this, 'NeptuneDBCluster', {
       instanceType: InstanceType.R5_LARGE,
-      vpc
+      vpc,
+      iamAuthentication: false,
     });
 
     // allow anyone in "vpc" to access
     cluster.connections.allowDefaultPortFromAnyIpv4('Open to everyone');
+
+    // If iamAuthentication is used signed headers n roles will be needed
+    // const role = new Role(this, 'NeptuneDBRole', {
+    //   roleName: 'NeptuneDBRole',
+    //   assumedBy: new ServicePrincipal('appsync.amazonaws.com')
+    // });
+    // const secondRole = new Role(this, 'NeptuneDBSecondRole', {
+    //   roleName: 'NeptuneDBSecondRole',
+    //   assumedBy: new AccountPrincipal(this.account)
+    // });
+    // role.addToPolicy(
+    //   new PolicyStatement({
+    //     resources: ['*'],
+    //     actions: ['neptune:*', 'lambda:*', 'logs:*', 'cognito-idp:*'],
+    //     effect: Effect.ALLOW,
+    //   })
+    // );
+    // cluster.grantConnect(role);
+    // cluster.grantConnect(secondRole);
 
     // get references to establish a websocket connection with lambda
     const writeAddress = cluster.clusterEndpoint.socketAddress;
@@ -33,92 +49,54 @@ export class NadetNeptuneAppSyncStack extends Stack {
 
 
     // Create GraphQL Api, appsync datastore, resolvers etc...
-    const api = new CfnGraphQLApi(this, 'NeptuneGraphQLAPI', {
+    const api = new GraphqlApi(this, 'NeptuneGraphQLAPI', {
       name: 'NeptuneGraphQLAPI',
-      authenticationType: 'API_KEY',
+      schema: Schema.fromAsset('graphql/schema.graphql'),
+      authorizationConfig: {
+        defaultAuthorization: {
+          authorizationType: AuthorizationType.API_KEY
+        }
+      },
       xrayEnabled: true,
     });
 
-    const schema = new CfnGraphQLSchema(this, 'NeptuneGraphQLSchema', {
-      apiId: api.attrApiId,
-      definition: `
-        type Post {
-          id: ID!
-          title: String!
-          content: String!
-        }
-
-        input PostInput {
-          title: String!
-          content: String!
-        }
-
-        type Query {
-          listPosts: [Post]
-        }
-
-        type Mutation {
-          createPost(post: PostInput!): Post
-        }
-
-        type Subscription {
-          onCreatePost: Post
-          @aws_subscribe(mutations: ["createPost"])
-        }
-      `
-    });
-
-    const apiKey = new CfnApiKey(this, 'NeptuneGraphQLAPIkey', {
-      apiId: api.attrApiId,
-    });
-
-    const lambdaFn = new Lambda(this, 'NeptuneLambdaFn', {
+    const lambdaFn = new NodejsFunction(this, 'NeptuneLambdaFn', {
       functionName: 'NeptuneLambdaFn',
       runtime: Runtime.NODEJS_14_X,
-      handler: 'main.handler',
-      code: Code.fromAsset('lambda-fns'),
+      handler: 'handler',
+      entry: join(__dirname, '..', 'lambdas', 'main.ts'),
       memorySize: 1024,
       environment: {
         WRITER: writeAddress,
         READER: readAddress
       },
-      vpc
+      vpc,
     });
 
-    const datasource = new CfnDataSource(this, 'NeptuneAppSyncDatasource', {
-      name: 'NeptuneAppSyncDatasource',
-      apiId: api.attrApiId,
-      type: 'AWS_LAMBDA',
-      lambdaConfig: {
-        lambdaFunctionArn: lambdaFn.functionArn
-      }
+    const dataSource = api.addLambdaDataSource('NeptuneDataSource', lambdaFn, {
+      name: 'NeptuneDataSource',
     });
-
-    new CfnResolver(this, 'NeptuneQueryResolver', {
-      apiId: api.attrApiId,
+    dataSource.createResolver({
       typeName: 'Query',
       fieldName: 'listPosts',
-      dataSourceName: datasource.name
-    }).addDependsOn(schema);
-    new CfnResolver(this, 'NeptuneMutationResolver', {
-      apiId: api.attrApiId,
+    });
+    dataSource.createResolver({
       typeName: 'Mutation',
       fieldName: 'createPost',
-      dataSourceName: datasource.name
-    }).addDependsOn(schema);
-
-
-    new CfnOutput(this, 'NeptuneGraphQLAPIkey', {
-      value: apiKey.attrApiKey,
-      exportName: 'NeptuneGraphQLAPIkey'
     });
-    new CfnOutput(this, 'NeptuneReadAddress', {
+
+
+    new CfnOutput(this, 'NeptuneGraphQLAPIKeyOutput', {
+      value: api.apiKey!,
+      exportName: 'NeptuneGraphQLAPIKeyOutput'
+    });
+    new CfnOutput(this, 'NeptuneReadAddressOutput', {
       value: readAddress,
-      exportName: 'NeptuneReadAddress'
+      exportName: 'NeptuneReadAddressOutput'
     });
-    new CfnOutput(this, 'NeptuneWriteAddress', {
+    new CfnOutput(this, 'NeptuneWriteAddressOutput', {
       value: writeAddress,
-      exportName: 'NeptuneWriteAddress'
+      exportName: 'NeptuneWriteAddressOutput'
     });
   }
 }
