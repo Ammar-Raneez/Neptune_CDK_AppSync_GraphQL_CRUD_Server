@@ -1,8 +1,8 @@
 {
-  "name": "nadet-neptune-app_sync",
+  "name": "neptune-app_sync",
   "version": "0.1.0",
   "bin": {
-    "nadet-neptune-app_sync": "bin/nadet-neptune-app_sync.js"
+    "neptune-app_sync": "bin/neptune-app_sync.js"
   },
   "scripts": {
     "build": "tsc",

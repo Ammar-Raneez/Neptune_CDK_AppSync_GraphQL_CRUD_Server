@@ -1,5 +1,5 @@
 {
-  "app": "npx ts-node --prefer-ts-exts bin/nadet-neptune-app_sync.ts",
+  "app": "npx ts-node --prefer-ts-exts bin/neptune-app_sync.ts",
   "watch": {
     "include": [
       "**"

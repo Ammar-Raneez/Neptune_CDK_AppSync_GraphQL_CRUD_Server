@@ -7,7 +7,7 @@ import { AuthorizationType, GraphqlApi, Schema } from '@aws-cdk/aws-appsync-alph
 import { join } from 'path';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 
-export class NadetNeptuneAppSyncStack extends Stack {
+export class NeptuneAppSyncStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
